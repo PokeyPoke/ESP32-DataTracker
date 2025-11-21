@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ESP32-C3 Data Tracker - Web Installer</title>
+    <meta name="description" content="Install firmware directly from your browser">
+    <script type="module" src="https://unpkg.com/esp-web-tools@10/dist/web/install-button.js?module"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f7;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 60px 20px;
+            color: #1d1d1f;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .container {
+            max-width: 580px;
+            width: 100%;
+        }
+
+        h1 {
+            font-size: 48px;
+            font-weight: 600;
+            text-align: center;
+            margin-bottom: 12px;
+            letter-spacing: -0.5px;
+        }
+
+        .subtitle {
+            font-size: 21px;
+            font-weight: 400;
+            text-align: center;
+            color: #86868b;
+            margin-bottom: 50px;
+        }
+
+        .version-card {
+            background: white;
+            border-radius: 18px;
+            padding: 32px;
+            margin-bottom: 24px;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+            text-align: center;
+        }
+
+        .version-label {
+            font-size: 14px;
+            color: #86868b;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            font-weight: 500;
+        }
+
+        .version-number {
+            font-size: 40px;
+            font-weight: 600;
+            color: #1d1d1f;
+            margin-bottom: 16px;
+        }
+
+        .version-description {
+            font-size: 17px;
+            color: #6e6e73;
+            line-height: 1.5;
+        }
+
+        .install-section {
+            background: white;
+            border-radius: 18px;
+            overflow: hidden;
+            margin-bottom: 24px;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+        }
+
+        .install-option {
+            padding: 28px 32px;
+            border-bottom: 1px solid #f5f5f7;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: background 0.2s;
+        }
+
+        .install-option:last-child {
+            border-bottom: none;
+        }
+
+        .install-option:hover {
+            background: #fafafa;
+        }
+
+        .option-content {
+            flex: 1;
+            text-align: left;
+        }
+
+        .option-title {
+            font-size: 19px;
+            font-weight: 600;
+            margin-bottom: 4px;
+            color: #1d1d1f;
+        }
+
+        .option-description {
+            font-size: 15px;
+            color: #86868b;
+            line-height: 1.4;
+        }
+
+        .install-button-wrapper {
+            margin-left: 20px;
+        }
+
+        esp-web-install-button button {
+            background: #0071e3;
+            color: white;
+            border: none;
+            padding: 10px 24px;
+            font-size: 15px;
+            font-weight: 500;
+            border-radius: 980px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        esp-web-install-button button:hover {
+            background: #0077ed;
+            transform: scale(1.02);
+        }
+
+        .advanced-option esp-web-install-button button {
+            background: #f5f5f7;
+            color: #1d1d1f;
+        }
+
+        .advanced-option esp-web-install-button button:hover {
+            background: #e8e8ed;
+        }
+
+        .requirements {
+            background: white;
+            border-radius: 18px;
+            padding: 24px 32px;
+            margin-bottom: 40px;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+        }
+
+        .requirements-title {
+            font-size: 17px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: #1d1d1f;
+        }
+
+        .requirements ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .requirements li {
+            font-size: 15px;
+            color: #6e6e73;
+            padding: 8px 0;
+            padding-left: 28px;
+            position: relative;
+            line-height: 1.5;
+        }
+
+        .requirements li::before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #0071e3;
+            font-weight: 600;
+            font-size: 16px;
+        }
+
+        .unsupported {
+            display: none;
+            background: white;
+            border-radius: 18px;
+            padding: 32px;
+            text-align: center;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+        }
+
+        .unsupported.show {
+            display: block;
+        }
+
+        .unsupported-title {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: #1d1d1f;
+        }
+
+        .unsupported-text {
+            font-size: 17px;
+            color: #86868b;
+            line-height: 1.5;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 40px;
+            border-top: 1px solid #d2d2d7;
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 24px;
+            margin-bottom: 16px;
+        }
+
+        .footer-links a {
+            font-size: 14px;
+            color: #0071e3;
+            text-decoration: none;
+            transition: opacity 0.2s;
+        }
+
+        .footer-links a:hover {
+            opacity: 0.7;
+        }
+
+        .footer-text {
+            font-size: 13px;
+            color: #86868b;
+        }
+
+        @media (max-width: 600px) {
+            h1 {
+                font-size: 36px;
+            }
+
+            .subtitle {
+                font-size: 19px;
+            }
+
+            .version-number {
+                font-size: 32px;
+            }
+
+            .install-option {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 16px;
+            }
+
+            .install-button-wrapper {
+                margin-left: 0;
+                width: 100%;
+            }
+
+            esp-web-install-button {
+                display: block;
+                width: 100%;
+            }
+
+            esp-web-install-button button {
+                width: 100%;
+                padding: 14px 24px;
+            }
+
+            .footer-links {
+                flex-direction: column;
+                gap: 12px;
+            }
+        }
+
+        .beta-badge {
+            display: inline-block;
+            background: #f5f5f7;
+            color: #6e6e73;
+            font-size: 13px;
+            font-weight: 500;
+            padding: 4px 12px;
+            border-radius: 12px;
+            margin-left: 8px;
+            vertical-align: middle;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Data Tracker</h1>
+        <p class="subtitle">Install firmware directly from your browser</p>
+
+        <div class="version-card">
+            <div class="version-label">Latest Version</div>
+            <div class="version-number">3.3.0-alpha</div>
+            <div class="version-description">
+                Separate modules: Crypto, Weather (auto-location), Countdown timer, HTTP/API fetch
+            </div>
+        </div>
+
+        <div class="install-section" id="install-section">
+            <div class="install-option">
+                <div class="option-content">
+                    <div class="option-title">Update</div>
+                    <div class="option-description">Install latest firmware, keep your settings</div>
+                </div>
+                <div class="install-button-wrapper">
+                    <esp-web-install-button
+                        manifest="manifest.json?v=14"
+                        install-supported>
+                        <button slot="activate">Install</button>
+                    </esp-web-install-button>
+                </div>
+            </div>
+
+            <div class="install-option advanced-option">
+                <div class="option-content">
+                    <div class="option-title">Advanced</div>
+                    <div class="option-description">Erase all data and install fresh</div>
+                </div>
+                <div class="install-button-wrapper">
+                    <esp-web-install-button
+                        manifest="manifest.json?v=14"
+                        erase-first
+                        install-supported>
+                        <button slot="activate">Erase & Install</button>
+                    </esp-web-install-button>
+                </div>
+            </div>
+        </div>
+
+        <div class="requirements">
+            <div class="requirements-title">Requirements</div>
+            <ul>
+                <li>Chrome or Edge browser</li>
+                <li>ESP32-C3 device with USB cable</li>
+                <li>Data cable (not charging-only)</li>
+            </ul>
+        </div>
+
+        <div class="unsupported" id="unsupported">
+            <div class="unsupported-title">Browser Not Supported</div>
+            <div class="unsupported-text">
+                Please use Chrome 89+ or Edge 89+ to install firmware.<br>
+                Web Serial API is required for installation.
+            </div>
+        </div>
+
+        <div class="footer">
+            <div class="footer-links">
+                <a href="https://github.com/yourusername/DataTracker">Documentation</a>
+                <a href="https://github.com/yourusername/DataTracker/issues">Support</a>
+                <a href="https://github.com/yourusername/DataTracker">GitHub</a>
+            </div>
+            <div class="footer-text">
+                ESP32-C3 Data Tracker • Alpha Release
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Check browser support
+        if (!navigator.serial) {
+            document.getElementById('install-section').style.display = 'none';
+            document.getElementById('unsupported').classList.add('show');
+        }
+    </script>
+</body>
+</html>

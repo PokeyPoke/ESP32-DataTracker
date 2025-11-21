@@ -1,0 +1,1316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ESP32-C3 Data Tracker - Enhanced Web Flasher</title>
+    <meta name="description" content="Flash and configure the ESP32-C3 Data Tracker directly from your browser">
+    <script type="module" src="https://unpkg.com/esp-web-tools@10/dist/web/install-button.js?module"></script>
+    <style>
+        :root {
+            --primary-color: #4CAF50;
+            --secondary-color: #2196F3;
+            --danger-color: #f44336;
+            --warning-color: #ff9800;
+            --text-color: #333;
+            --bg-color: #f5f5f5;
+            --card-bg: #ffffff;
+            --shadow: 0 2px 8px rgba(0,0,0,0.1);
+            --tab-active: #667eea;
+            --tab-inactive: #9ca3af;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            width: 100%;
+            background: var(--card-bg);
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.95;
+        }
+
+        /* Tab Navigation */
+        .tab-nav {
+            display: flex;
+            background: #f8f9fa;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 20px;
+            background: none;
+            border: none;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            color: var(--tab-inactive);
+            transition: all 0.3s ease;
+            border-bottom: 3px solid transparent;
+        }
+
+        .tab-btn:hover {
+            background: #f0f0f0;
+        }
+
+        .tab-btn.active {
+            color: var(--tab-active);
+            border-bottom-color: var(--tab-active);
+            background: white;
+        }
+
+        .tab-content {
+            display: none;
+            padding: 40px 30px;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Form Styling */
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--text-color);
+        }
+
+        .form-group input[type="text"],
+        .form-group input[type="password"],
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+
+        .form-help {
+            font-size: 0.85em;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        /* Info Boxes */
+        .info-box {
+            background: #e3f2fd;
+            border-left: 4px solid var(--secondary-color);
+            padding: 15px;
+            border-radius: 4px;
+            margin: 15px 0;
+        }
+
+        .warning-box {
+            background: #fff3e0;
+            border-left: 4px solid var(--warning-color);
+            padding: 15px;
+            border-radius: 4px;
+            margin: 15px 0;
+        }
+
+        .success-box {
+            background: #e8f5e9;
+            border-left: 4px solid var(--primary-color);
+            padding: 15px;
+            border-radius: 4px;
+            margin: 15px 0;
+        }
+
+        .danger-box {
+            background: #ffebee;
+            border-left: 4px solid var(--danger-color);
+            padding: 15px;
+            border-radius: 4px;
+            margin: 15px 0;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 15px 40px;
+            font-size: 1.1em;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: var(--primary-color);
+            color: white;
+            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(76, 175, 80, 0.4);
+        }
+
+        .btn-danger {
+            background: var(--danger-color);
+            color: white;
+            box-shadow: 0 4px 12px rgba(244, 67, 54, 0.3);
+        }
+
+        .btn-danger:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(244, 67, 54, 0.4);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        /* Module Cards */
+        .module-list {
+            margin-top: 20px;
+        }
+
+        .module-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 2px solid #e0e0e0;
+            cursor: move;
+        }
+
+        .module-card:hover {
+            border-color: var(--primary-color);
+        }
+
+        .module-card.dragging {
+            opacity: 0.5;
+        }
+
+        .module-name {
+            font-weight: 600;
+            color: var(--text-color);
+        }
+
+        .module-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-small {
+            padding: 5px 15px;
+            font-size: 0.9em;
+            border-radius: 5px;
+            border: none;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .btn-edit {
+            background: var(--secondary-color);
+            color: white;
+        }
+
+        .btn-delete {
+            background: var(--danger-color);
+            color: white;
+        }
+
+        /* Progress Steps */
+        .progress-steps {
+            display: flex;
+            justify-content: space-between;
+            margin: 30px 0;
+        }
+
+        .progress-step {
+            flex: 1;
+            text-align: center;
+            padding: 15px;
+            position: relative;
+        }
+
+        .progress-step::after {
+            content: '';
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            width: 100%;
+            height: 2px;
+            background: #e0e0e0;
+            z-index: -1;
+        }
+
+        .progress-step:last-child::after {
+            display: none;
+        }
+
+        .progress-step.active .step-number {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .progress-step.completed .step-number {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .step-number {
+            width: 40px;
+            height: 40px;
+            background: #e0e0e0;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .step-label {
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            margin-bottom: 20px;
+        }
+
+        .modal-header h3 {
+            color: var(--text-color);
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            justify-content: flex-end;
+        }
+
+        /* Search Results */
+        .search-results {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            margin-top: 10px;
+            display: none;
+        }
+
+        .search-results.active {
+            display: block;
+        }
+
+        .search-result-item {
+            padding: 10px;
+            cursor: pointer;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .search-result-item:hover {
+            background: #f8f9fa;
+        }
+
+        .search-result-item:last-child {
+            border-bottom: none;
+        }
+
+        /* Checkbox */
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 15px 0;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        .checkbox-group label {
+            cursor: pointer;
+            margin: 0;
+        }
+
+        /* Loading Spinner */
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid var(--primary-color);
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            margin: 0 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Hide element */
+        .hidden {
+            display: none !important;
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            .header h1 {
+                font-size: 1.8em;
+            }
+
+            .tab-btn {
+                font-size: 0.95em;
+                padding: 15px 10px;
+            }
+
+            .tab-content {
+                padding: 30px 20px;
+            }
+
+            .module-card {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+
+            .progress-steps {
+                flex-direction: column;
+            }
+
+            .progress-step::after {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 ESP32-C3 Data Tracker</h1>
+            <p>Flash and configure your device in minutes!</p>
+        </div>
+
+        <!-- Tab Navigation -->
+        <div class="tab-nav">
+            <button class="tab-btn active" onclick="switchTab('quick')">
+                ⚡ Quick Setup
+            </button>
+            <button class="tab-btn" onclick="switchTab('secure')">
+                🔒 Secure Setup
+            </button>
+        </div>
+
+        <!-- Quick Setup Tab -->
+        <div class="tab-content active" id="quick-setup">
+            <div class="info-box">
+                <strong>⚡ Quick Setup:</strong> Configure WiFi and modules before flashing for immediate use!
+                <br><small>Your configuration will be uploaded to the device after firmware installation completes.</small>
+            </div>
+
+            <div class="warning-box">
+                <strong>⚠️ Security Notice:</strong> WiFi credentials will be sent to the device in plain text via USB serial.
+                Only use this method on trusted computers. For maximum security, use "Secure Setup" tab.
+            </div>
+
+            <!-- Progress Steps -->
+            <div class="progress-steps">
+                <div class="progress-step active" id="step-1">
+                    <div class="step-number">1</div>
+                    <div class="step-label">Configure</div>
+                </div>
+                <div class="progress-step" id="step-2">
+                    <div class="step-number">2</div>
+                    <div class="step-label">Flash</div>
+                </div>
+                <div class="progress-step" id="step-3">
+                    <div class="step-number">3</div>
+                    <div class="step-label">Upload Config</div>
+                </div>
+            </div>
+
+            <!-- Configuration Form -->
+            <div id="config-section">
+                <h3 style="margin-bottom: 20px;">WiFi Configuration</h3>
+
+                <div class="form-group">
+                    <label for="wifi-ssid">WiFi Network (SSID) *</label>
+                    <input type="text" id="wifi-ssid" placeholder="Enter your WiFi network name" required>
+                    <div class="form-help">The WiFi network your device will connect to</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="wifi-password">WiFi Password *</label>
+                    <input type="password" id="wifi-password" placeholder="Enter WiFi password" required>
+                    <div class="form-help">Leave blank if network has no password</div>
+                </div>
+
+                <div class="checkbox-group">
+                    <input type="checkbox" id="show-password">
+                    <label for="show-password">Show password</label>
+                </div>
+
+                <hr style="margin: 30px 0; border: none; border-top: 1px solid #e0e0e0;">
+
+                <h3 style="margin-bottom: 20px;">Module Configuration</h3>
+
+                <div class="info-box">
+                    <strong>📊 Select up to 5 modules</strong><br>
+                    <small>Choose the data you want to display. You can add more modules later via device settings.</small>
+                </div>
+
+                <button class="btn btn-primary" onclick="addModule()" style="margin-bottom: 20px;">
+                    ➕ Add Module
+                </button>
+
+                <div class="module-list" id="module-list">
+                    <!-- Modules will be added here -->
+                </div>
+
+                <div class="danger-box" id="module-limit-warning" style="display: none;">
+                    <strong>⚠️ Module Limit Reached:</strong> Maximum 5 modules for quick setup. Remove one to add another.
+                </div>
+
+                <hr style="margin: 30px 0; border: none; border-top: 1px solid #e0e0e0;">
+
+                <button class="btn btn-primary" onclick="proceedToFlash()" id="proceed-btn">
+                    🚀 Continue to Flash
+                </button>
+            </div>
+
+            <!-- Flash Section (initially hidden) -->
+            <div id="flash-section" class="hidden">
+                <div class="success-box">
+                    <strong>✅ Configuration Ready!</strong><br>
+                    <small>Click below to flash firmware with your custom configuration.</small>
+                </div>
+
+                <div style="text-align: center; margin: 30px 0;">
+                    <esp-web-install-button
+                        id="quick-flash-btn"
+                        manifest="manifest.json"
+                        install-supported>
+                        <button slot="activate" class="btn btn-primary">
+                            📥 Flash with Configuration
+                        </button>
+                    </esp-web-install-button>
+                </div>
+
+                <button class="btn" onclick="backToConfig()" style="background: #9ca3af; color: white;">
+                    ← Back to Configuration
+                </button>
+            </div>
+
+            <!-- Success Section (shown after completion) -->
+            <div id="success-section" class="hidden">
+                <div class="success-box">
+                    <h3>🎉 Setup Complete!</h3>
+                    <p>Your Data Tracker is ready to use. It should connect to WiFi automatically.</p>
+                </div>
+                <div class="info-box">
+                    <strong>Next Steps:</strong>
+                    <ol style="margin: 10px 0 0 20px;">
+                        <li>Wait for device to boot and connect to WiFi (~30 seconds)</li>
+                        <li>Device will start displaying your configured modules</li>
+                        <li>Visit device settings page to customize further</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+
+        <!-- Secure Setup Tab (Original Flash Page) -->
+        <div class="tab-content" id="secure-setup">
+            <div class="success-box">
+                <strong>🔒 Secure Setup:</strong> Traditional setup method via device AP mode
+                <br><small>WiFi credentials never leave your device. Recommended for maximum security.</small>
+            </div>
+
+            <div class="info-box">
+                <strong>How it works:</strong>
+                <ol style="margin: 10px 0 0 20px; line-height: 1.8;">
+                    <li>Flash firmware to device</li>
+                    <li>Device creates its own WiFi network (DataTracker-XXXX)</li>
+                    <li>Connect to device's network and configure</li>
+                    <li>Your credentials stay secure on the device</li>
+                </ol>
+            </div>
+
+            <div class="warning-box">
+                <strong>⚠️ Requirements:</strong>
+                <ul style="margin-top: 10px; margin-left: 20px;">
+                    <li>Chrome 89+ or Edge 89+ browser</li>
+                    <li>ESP32-C3 connected via USB cable</li>
+                    <li>USB data cable (not just charging cable)</li>
+                </ul>
+            </div>
+
+            <div style="text-align: center; margin: 30px 0;">
+                <esp-web-install-button
+                    manifest="manifest.json"
+                    install-supported>
+                    <button slot="activate" class="btn btn-primary">
+                        📥 Install Firmware
+                    </button>
+                </esp-web-install-button>
+
+                <esp-web-install-button
+                    manifest="manifest.json"
+                    erase-first
+                    install-supported>
+                    <button slot="activate" class="btn btn-danger" style="margin-top: 15px;">
+                        🔄 Factory Reset & Install
+                    </button>
+                </esp-web-install-button>
+            </div>
+
+            <div class="success-box">
+                <strong>✅ After Flashing:</strong>
+                <ol style="margin: 10px 0 0 20px; line-height: 1.8;">
+                    <li>Look for WiFi network: <strong>DataTracker-XXXX</strong></li>
+                    <li>Connect with password shown on device display</li>
+                    <li>Browser opens setup page (or visit 192.168.4.1)</li>
+                    <li>Configure WiFi and select modules</li>
+                    <li>Save and enjoy!</li>
+                </ol>
+            </div>
+        </div>
+
+        <!-- Module Configuration Modal -->
+        <div class="modal" id="module-modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 id="modal-title">Add Module</h3>
+                </div>
+                <div id="modal-body">
+                    <!-- Module form will be inserted here -->
+                </div>
+                <div class="modal-actions">
+                    <button class="btn" onclick="closeModal()" style="background: #9ca3af; color: white;">Cancel</button>
+                    <button class="btn btn-primary" onclick="saveModule()">Save Module</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration state
+        let modules = [];
+        let currentModuleIndex = -1;
+        const MAX_MODULES = 5;
+
+        // Tab switching
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+
+            if (tab === 'quick') {
+                document.querySelector('.tab-btn:first-child').classList.add('active');
+                document.getElementById('quick-setup').classList.add('active');
+            } else {
+                document.querySelector('.tab-btn:last-child').classList.add('active');
+                document.getElementById('secure-setup').classList.add('active');
+            }
+        }
+
+        // Show/hide password
+        document.addEventListener('DOMContentLoaded', () => {
+            const passwordInput = document.getElementById('wifi-password');
+            const showPasswordCheckbox = document.getElementById('show-password');
+
+            if (showPasswordCheckbox) {
+                showPasswordCheckbox.addEventListener('change', (e) => {
+                    passwordInput.type = e.target.checked ? 'text' : 'password';
+                });
+            }
+        });
+
+        // Module management
+        function addModule() {
+            if (modules.length >= MAX_MODULES) {
+                document.getElementById('module-limit-warning').style.display = 'block';
+                return;
+            }
+            currentModuleIndex = -1;
+            showModuleModal();
+        }
+
+        function editModule(index) {
+            currentModuleIndex = index;
+            showModuleModal(modules[index]);
+        }
+
+        function deleteModule(index) {
+            if (confirm('Delete this module?')) {
+                modules.splice(index, 1);
+                renderModules();
+            }
+        }
+
+        function showModuleModal(moduleData = null) {
+            const modal = document.getElementById('module-modal');
+            const modalBody = document.getElementById('modal-body');
+            const modalTitle = document.getElementById('modal-title');
+
+            modalTitle.textContent = moduleData ? 'Edit Module' : 'Add Module';
+
+            // Module type selector
+            modalBody.innerHTML = `
+                <div class="form-group">
+                    <label for="module-type">Module Type</label>
+                    <select id="module-type" onchange="updateModuleForm()">
+                        <option value="">Select a module type...</option>
+                        <option value="crypto">Cryptocurrency</option>
+                        <option value="stock">Stock Price</option>
+                        <option value="weather">Weather</option>
+                        <option value="custom">Custom Value</option>
+                    </select>
+                </div>
+                <div id="module-form-fields"></div>
+            `;
+
+            if (moduleData) {
+                document.getElementById('module-type').value = moduleData.type;
+                updateModuleForm(moduleData);
+            }
+
+            modal.classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('module-modal').classList.remove('active');
+        }
+
+        function updateModuleForm(existingData = null) {
+            const type = document.getElementById('module-type').value;
+            const formFields = document.getElementById('module-form-fields');
+
+            if (!type) {
+                formFields.innerHTML = '';
+                return;
+            }
+
+            let html = '';
+
+            switch(type) {
+                case 'crypto':
+                    html = `
+                        <div class="form-group">
+                            <label>Cryptocurrency</label>
+                            <input type="text" id="crypto-search" placeholder="Search for a cryptocurrency..." oninput="searchCrypto(this.value)">
+                            <div class="search-results" id="crypto-results"></div>
+                        </div>
+                        <div class="form-group">
+                            <label>Selected Crypto</label>
+                            <input type="text" id="crypto-name" readonly placeholder="No crypto selected" value="${existingData?.cryptoName || ''}">
+                            <input type="hidden" id="crypto-id" value="${existingData?.cryptoId || ''}">
+                            <input type="hidden" id="crypto-symbol" value="${existingData?.cryptoSymbol || ''}">
+                        </div>
+                    `;
+                    break;
+
+                case 'stock':
+                    html = `
+                        <div class="form-group">
+                            <label>Stock Ticker</label>
+                            <input type="text" id="stock-ticker" placeholder="e.g., AAPL, TSLA, GOOGL" value="${existingData?.ticker || ''}" style="text-transform: uppercase;">
+                            <div class="form-help">Enter stock ticker symbol</div>
+                        </div>
+                        <div class="form-group">
+                            <label>Company Name (optional)</label>
+                            <input type="text" id="stock-name" placeholder="e.g., Apple Inc." value="${existingData?.name || ''}">
+                        </div>
+                    `;
+                    break;
+
+                case 'weather':
+                    html = `
+                        <div class="form-group">
+                            <label>Location</label>
+                            <input type="text" id="weather-search" placeholder="Search for a city..." oninput="searchWeather(this.value)">
+                            <div class="search-results" id="weather-results"></div>
+                        </div>
+                        <div class="form-group">
+                            <label>Selected Location</label>
+                            <input type="text" id="weather-location" readonly placeholder="No location selected" value="${existingData?.location || ''}">
+                            <input type="hidden" id="weather-lat" value="${existingData?.latitude || ''}">
+                            <input type="hidden" id="weather-lon" value="${existingData?.longitude || ''}">
+                        </div>
+                    `;
+                    break;
+
+                case 'custom':
+                    html = `
+                        <div class="form-group">
+                            <label>Label</label>
+                            <input type="text" id="custom-label" placeholder="e.g., Temperature" value="${existingData?.label || ''}">
+                        </div>
+                        <div class="form-group">
+                            <label>Initial Value</label>
+                            <input type="number" id="custom-value" step="any" placeholder="0" value="${existingData?.value || '0'}">
+                        </div>
+                        <div class="form-group">
+                            <label>Unit (optional)</label>
+                            <input type="text" id="custom-unit" placeholder="e.g., °C, %, kg" value="${existingData?.unit || ''}">
+                        </div>
+                    `;
+                    break;
+            }
+
+            formFields.innerHTML = html;
+        }
+
+        // Search functions (placeholders - will be implemented with actual API calls)
+        let searchTimeout;
+
+        function searchCrypto(query) {
+            clearTimeout(searchTimeout);
+            if (query.length < 2) {
+                document.getElementById('crypto-results').classList.remove('active');
+                return;
+            }
+
+            const results = document.getElementById('crypto-results');
+            results.innerHTML = '<div class="search-result-item">Searching...</div>';
+            results.classList.add('active');
+
+            searchTimeout = setTimeout(() => {
+                // TODO: Actual CoinGecko API integration
+                // For now, show popular cryptos
+                const popular = [
+                    {id: 'bitcoin', name: 'Bitcoin', symbol: 'BTC'},
+                    {id: 'ethereum', name: 'Ethereum', symbol: 'ETH'},
+                    {id: 'solana', name: 'Solana', symbol: 'SOL'},
+                    {id: 'dogecoin', name: 'Dogecoin', symbol: 'DOGE'},
+                    {id: 'cardano', name: 'Cardano', symbol: 'ADA'}
+                ].filter(c => c.name.toLowerCase().includes(query.toLowerCase()) ||
+                              c.symbol.toLowerCase().includes(query.toLowerCase()));
+
+                results.innerHTML = popular.map(crypto =>
+                    `<div class="search-result-item" onclick='selectCrypto(${JSON.stringify(crypto)})'>
+                        ${crypto.name} (${crypto.symbol})
+                    </div>`
+                ).join('') || '<div class="search-result-item">No results</div>';
+            }, 300);
+        }
+
+       function selectCrypto(crypto) {
+            document.getElementById('crypto-name').value = crypto.name;
+            document.getElementById('crypto-id').value = crypto.id;
+            document.getElementById('crypto-symbol').value = crypto.symbol;
+            document.getElementById('crypto-results').classList.remove('active');
+            document.getElementById('crypto-search').value = '';
+        }
+
+        function searchWeather(query) {
+            clearTimeout(searchTimeout);
+            if (query.length < 2) {
+                document.getElementById('weather-results').classList.remove('active');
+                return;
+            }
+
+            const results = document.getElementById('weather-results');
+            results.innerHTML = '<div class="search-result-item">Searching...</div>';
+            results.classList.add('active');
+
+            searchTimeout = setTimeout(() => {
+                // TODO: Actual Open-Meteo geocoding API integration
+                // For now, show popular cities
+                const cities = [
+                    {name: 'New York', lat: 40.7128, lon: -74.0060},
+                    {name: 'London', lat: 51.5074, lon: -0.1278},
+                    {name: 'Tokyo', lat: 35.6762, lon: 139.6503},
+                    {name: 'Paris', lat: 48.8566, lon: 2.3522},
+                    {name: 'Sydney', lat: -33.8688, lon: 151.2093}
+                ].filter(c => c.name.toLowerCase().includes(query.toLowerCase()));
+
+                results.innerHTML = cities.map(city =>
+                    `<div class="search-result-item" onclick='selectWeather(${JSON.stringify(city)})'>
+                        ${city.name}
+                    </div>`
+                ).join('') || '<div class="search-result-item">No results</div>';
+            }, 300);
+        }
+
+        function selectWeather(city) {
+            document.getElementById('weather-location').value = city.name;
+            document.getElementById('weather-lat').value = city.lat;
+            document.getElementById('weather-lon').value = city.lon;
+            document.getElementById('weather-results').classList.remove('active');
+            document.getElementById('weather-search').value = '';
+        }
+
+        function saveModule() {
+            const type = document.getElementById('module-type').value;
+            if (!type) {
+                alert('Please select a module type');
+                return;
+            }
+
+            let moduleData = { type };
+
+            switch(type) {
+                case 'crypto':
+                    const cryptoId = document.getElementById('crypto-id').value;
+                    if (!cryptoId) {
+                        alert('Please select a cryptocurrency');
+                        return;
+                    }
+                    moduleData.cryptoId = cryptoId;
+                    moduleData.cryptoName = document.getElementById('crypto-name').value;
+                    moduleData.cryptoSymbol = document.getElementById('crypto-symbol').value;
+                    break;
+
+                case 'stock':
+                    const ticker = document.getElementById('stock-ticker').value;
+                    if (!ticker) {
+                        alert('Please enter a stock ticker');
+                        return;
+                    }
+                    moduleData.ticker = ticker.toUpperCase();
+                    moduleData.name = document.getElementById('stock-name').value || ticker;
+                    break;
+
+                case 'weather':
+                    const location = document.getElementById('weather-location').value;
+                    if (!location) {
+                        alert('Please select a location');
+                        return;
+                    }
+                    moduleData.location = location;
+                    moduleData.latitude = parseFloat(document.getElementById('weather-lat').value);
+                    moduleData.longitude = parseFloat(document.getElementById('weather-lon').value);
+                    break;
+
+                case 'custom':
+                    const label = document.getElementById('custom-label').value;
+                    if (!label) {
+                        alert('Please enter a label');
+                        return;
+                    }
+                    moduleData.label = label;
+                    moduleData.value = parseFloat(document.getElementById('custom-value').value) || 0;
+                    moduleData.unit = document.getElementById('custom-unit').value;
+                    break;
+            }
+
+            if (currentModuleIndex >= 0) {
+                modules[currentModuleIndex] = moduleData;
+            } else {
+                modules.push(moduleData);
+            }
+
+            renderModules();
+            closeModal();
+        }
+
+        function renderModules() {
+            const moduleList = document.getElementById('module-list');
+            const limitWarning = document.getElementById('module-limit-warning');
+
+            if (modules.length === 0) {
+                moduleList.innerHTML = '<div class="info-box">No modules added yet. Click "Add Module" to get started.</div>';
+            } else {
+                moduleList.innerHTML = modules.map((module, index) => {
+                    let displayName = '';
+                    switch(module.type) {
+                        case 'crypto': displayName = `${module.cryptoName} (${module.cryptoSymbol})`; break;
+                        case 'stock': displayName = `${module.ticker} - ${module.name}`; break;
+                        case 'weather': displayName = `Weather: ${module.location}`; break;
+                        case 'custom': displayName = `${module.label} ${module.unit}`; break;
+                    }
+
+                    return `
+                        <div class="module-card" draggable="true" data-index="${index}">
+                            <div class="module-name">
+                                <span style="color: #999; margin-right: 10px;">☰</span>
+                                ${displayName}
+                            </div>
+                            <div class="module-actions">
+                                <button class="btn-small btn-edit" onclick="editModule(${index})">Edit</button>
+                                <button class="btn-small btn-delete" onclick="deleteModule(${index})">Delete</button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                // Add drag and drop
+                const cards = moduleList.querySelectorAll('.module-card');
+                cards.forEach(card => {
+                    card.addEventListener('dragstart', handleDragStart);
+                    card.addEventListener('dragover', handleDragOver);
+                    card.addEventListener('drop', handleDrop);
+                    card.addEventListener('dragend', handleDragEnd);
+                });
+            }
+
+            limitWarning.style.display = modules.length >= MAX_MODULES ? 'block' : 'none';
+        }
+
+        // Drag and drop handlers
+        let draggedItem = null;
+
+        function handleDragStart(e) {
+            draggedItem = parseInt(e.target.dataset.index);
+            e.target.classList.add('dragging');
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            const targetIndex = parseInt(e.target.closest('.module-card').dataset.index);
+
+            if (draggedItem !== targetIndex) {
+                const draggedModule = modules[draggedItem];
+                modules.splice(draggedItem, 1);
+                modules.splice(targetIndex, 0, draggedModule);
+                renderModules();
+            }
+        }
+
+        function handleDragEnd(e) {
+            e.target.classList.remove('dragging');
+            draggedItem = null;
+        }
+
+        // Proceed to flash
+        function proceedToFlash() {
+            const ssid = document.getElementById('wifi-ssid').value.trim();
+            const password = document.getElementById('wifi-password').value;
+
+            if (!ssid) {
+                alert('Please enter WiFi SSID');
+                return;
+            }
+
+            if (modules.length === 0) {
+                if (!confirm('No modules configured. Continue anyway?')) {
+                    return;
+                }
+            }
+
+            // Save config to localStorage
+            const config = {
+                wifi: { ssid, password },
+                modules: modules
+            };
+            localStorage.setItem('datatracker-config', JSON.stringify(config));
+
+            // Update progress
+            document.getElementById('step-1').classList.add('completed');
+            document.getElementById('step-2').classList.add('active');
+
+            // Show flash section
+            document.getElementById('config-section').classList.add('hidden');
+            document.getElementById('flash-section').classList.remove('hidden');
+
+            // Listen for flash completion
+            document.getElementById('quick-flash-btn').addEventListener('state-changed', handleFlashState);
+        }
+
+        function backToConfig() {
+            document.getElementById('step-2').classList.remove('active');
+            document.getElementById('step-1').classList.remove('completed');
+
+            document.getElementById('flash-section').classList.add('hidden');
+            document.getElementById('config-section').classList.remove('hidden');
+        }
+
+        function handleFlashState(e) {
+            console.log('Flash state:', e.detail.state);
+
+            if (e.detail.state === 'installed') {
+                // Flash completed successfully
+                document.getElementById('step-2').classList.add('completed');
+                document.getElementById('step-3').classList.add('active');
+
+                // Upload configuration
+                uploadConfiguration();
+            }
+        }
+
+        async function uploadConfiguration() {
+            try {
+                const configStr = localStorage.getItem('datatracker-config');
+                if (!configStr) {
+                    throw new Error('No configuration found');
+                }
+
+                const userConfig = JSON.parse(configStr);
+
+                // Generate device-compatible config.json
+                const deviceConfig = generateDeviceConfig(userConfig);
+
+                console.log('Generated config:', deviceConfig);
+
+                // Upload via Web Serial
+                await uploadViaSerial(deviceConfig);
+
+                // Success
+                document.getElementById('step-3').classList.add('completed');
+                document.getElementById('flash-section').classList.add('hidden');
+                document.getElementById('success-section').classList.remove('hidden');
+
+                // Clear saved config
+                localStorage.removeItem('datatracker-config');
+
+            } catch (error) {
+                console.error('Config upload failed:', error);
+                alert('Configuration upload failed. Device will start in AP mode.\n\nError: ' + error.message + '\n\nYou can configure it via AP mode instead.');
+
+                // Still show success section so user can proceed
+                document.getElementById('step-3').classList.add('completed');
+                document.getElementById('flash-section').classList.add('hidden');
+                document.getElementById('success-section').classList.remove('hidden');
+                localStorage.removeItem('datatracker-config');
+            }
+        }
+
+        function generateDeviceConfig(userConfig) {
+            // Generate device-compatible config structure matching config.cpp defaults
+            const deviceConfig = {
+                wifi: {
+                    ssid: userConfig.wifi.ssid,
+                    password: userConfig.wifi.password
+                },
+                device: {
+                    activeModule: userConfig.modules[0]?.id || 'bitcoin',
+                    enableButton: true,
+                    refreshInterval: 300,
+                    currency: 'USD',
+                    brightness: 255,
+                    moduleOrder: []
+                },
+                modules: {}
+            };
+
+            // Build module order array
+            userConfig.modules.forEach(mod => {
+                deviceConfig.device.moduleOrder.push(mod.id);
+            });
+
+            // Always add settings module
+            deviceConfig.device.moduleOrder.push('settings');
+
+            // Convert user modules to device format
+            userConfig.modules.forEach(mod => {
+                const moduleId = mod.id;
+
+                if (mod.type === 'crypto') {
+                    deviceConfig.modules[moduleId] = {
+                        type: 'crypto',
+                        cryptoId: mod.cryptoId,
+                        cryptoSymbol: mod.cryptoSymbol,
+                        cryptoName: mod.cryptoName,
+                        value: 0.0,
+                        change24h: 0.0,
+                        lastUpdate: 0,
+                        lastSuccess: false
+                    };
+                } else if (mod.type === 'stock') {
+                    deviceConfig.modules[moduleId] = {
+                        type: 'stock',
+                        ticker: mod.ticker,
+                        name: mod.name || mod.ticker,
+                        value: 0.0,
+                        change: 0.0,
+                        lastUpdate: 0,
+                        lastSuccess: false
+                    };
+                } else if (mod.type === 'weather') {
+                    deviceConfig.modules[moduleId] = {
+                        type: 'weather',
+                        latitude: mod.latitude,
+                        longitude: mod.longitude,
+                        location: mod.location,
+                        temperature: 0.0,
+                        condition: 'Unknown',
+                        lastUpdate: 0,
+                        lastSuccess: false
+                    };
+                } else if (mod.type === 'custom') {
+                    deviceConfig.modules[moduleId] = {
+                        type: 'custom',
+                        value: parseFloat(mod.value) || 0.0,
+                        label: mod.label,
+                        unit: mod.unit || 'units',
+                        lastUpdate: 0,
+                        lastSuccess: true
+                    };
+                }
+            });
+
+            // Always add settings module
+            deviceConfig.modules.settings = {
+                type: 'settings',
+                securityCode: 0,
+                codeTimeRemaining: 0,
+                lastUpdate: 0,
+                lastSuccess: true
+            };
+
+            return deviceConfig;
+        }
+
+        async function uploadViaSerial(config) {
+            // Try to get the serial port from esp-web-tools
+            // The esp-web-tools component maintains a connection after flashing
+            const espInstaller = document.querySelector('esp-web-install-button');
+
+            let port;
+
+            // Try to reuse existing connection
+            if (espInstaller && espInstaller._port) {
+                console.log('Reusing existing serial connection');
+                port = espInstaller._port;
+            } else {
+                console.log('Requesting new serial connection');
+                // Request new serial port
+                port = await navigator.serial.requestPort();
+                await port.open({ baudRate: 115200 });
+            }
+
+            try {
+                // Give device time to boot (wait 3 seconds after flash)
+                console.log('Waiting for device to boot...');
+                await new Promise(resolve => setTimeout(resolve, 3000));
+
+                // Prepare config JSON
+                const configJson = JSON.stringify(config);
+                console.log('Config size:', configJson.length, 'bytes');
+
+                // Send config with special markers
+                const writer = port.writable.getWriter();
+                const encoder = new TextEncoder();
+
+                // Send start marker
+                await writer.write(encoder.encode('<<<CONFIG_START>>>\n'));
+
+                // Send config JSON
+                await writer.write(encoder.encode(configJson));
+
+                // Send end marker
+                await writer.write(encoder.encode('\n<<<CONFIG_END>>>\n'));
+
+                writer.releaseLock();
+
+                console.log('Config uploaded successfully');
+
+                // Wait for device to process and reboot
+                await new Promise(resolve => setTimeout(resolve, 2000));
+
+            } finally {
+                // Only close if we opened a new connection
+                if (!espInstaller || !espInstaller._port) {
+                    try {
+                        await port.close();
+                    } catch (e) {
+                        console.warn('Error closing port:', e);
+                    }
+                }
+            }
+        }
+
+        // Check browser support
+        if (!navigator.serial) {
+            alert('Web Serial API not supported. Please use Chrome 89+ or Edge 89+');
+        }
+
+        // Load saved config on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedConfig = localStorage.getItem('datatracker-config');
+            if (savedConfig) {
+                try {
+                    const config = JSON.parse(savedConfig);
+                    document.getElementById('wifi-ssid').value = config.wifi.ssid || '';
+                    document.getElementById('wifi-password').value = config.wifi.password || '';
+                    modules = config.modules || [];
+                    renderModules();
+                } catch (e) {
+                    console.error('Failed to load saved config:', e);
+                }
+            }
+        });
+    </script>
+</body>
+</html>
