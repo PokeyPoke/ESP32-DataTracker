@@ -46,6 +46,8 @@ private:
     void handleAddAlert();
     void handleRemoveAlert();
     void handleToggleAlert();
+    void handleExportConfig();
+    void handleExportData();
 
     // WiFi scanning
     void startWiFiScan();

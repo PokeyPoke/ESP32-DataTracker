@@ -1749,6 +1749,15 @@ void NetworkManager::setupSettingsServer() {
         handleToggleAlert();
     });
 
+    // Data export endpoints
+    server->on("/api/export/config", HTTP_GET, [this]() {
+        handleExportConfig();
+    });
+
+    server->on("/api/export/data", HTTP_GET, [this]() {
+        handleExportData();
+    });
+
     // Stock search proxy (no auth required) - bypasses CORS
     server->on("/api/stock-search", HTTP_GET, [this]() {
         handleStockSearch();
@@ -3312,4 +3321,147 @@ void NetworkManager::handleToggleAlert() {
 
     saveConfig();
     server->send(200, "application/json", "{\"success\":true}");
+}
+
+void NetworkManager::handleExportConfig() {
+    // Check authorization
+    String token = server->header("Authorization");
+    if (!security.validateSession(token)) {
+        server->send(401, "application/json", "{\"error\":\"Unauthorized\"}");
+        return;
+    }
+
+    // Get format parameter (json or csv)
+    String format = server->arg("format");
+    if (format.length() == 0) {
+        format = "json";  // Default to JSON
+    }
+
+    if (format == "json") {
+        // Export entire config as JSON
+        String response;
+        serializeJsonPretty(config, response);
+
+        server->sendHeader("Content-Disposition", "attachment; filename=\"datatracker-config.json\"");
+        server->send(200, "application/json", response);
+
+    } else if (format == "csv") {
+        // Export config as CSV (flattened key-value pairs)
+        String csv = "Key,Value\n";
+
+        // WiFi info
+        csv += "wifi.ssid," + config["wifi"]["ssid"].as<String>() + "\n";
+
+        // Device info
+        csv += "device.name," + config["device"]["name"].as<String>() + "\n";
+        csv += "device.activeModule," + config["device"]["activeModule"].as<String>() + "\n";
+
+        // Module list
+        JsonArray moduleOrder = config["device"]["moduleOrder"];
+        String moduleList = "";
+        for (JsonVariant v : moduleOrder) {
+            if (moduleList.length() > 0) moduleList += ";";
+            moduleList += v.as<String>();
+        }
+        csv += "device.moduleOrder,\"" + moduleList + "\"\n";
+
+        // Modules count
+        JsonObject modules = config["modules"];
+        csv += "modules.count," + String(modules.size()) + "\n";
+
+        server->sendHeader("Content-Disposition", "attachment; filename=\"datatracker-config.csv\"");
+        server->send(200, "text/csv", csv);
+
+    } else {
+        server->send(400, "application/json", "{\"error\":\"Invalid format. Use 'json' or 'csv'\"}");
+    }
+}
+
+void NetworkManager::handleExportData() {
+    // Check authorization
+    String token = server->header("Authorization");
+    if (!security.validateSession(token)) {
+        server->send(401, "application/json", "{\"error\":\"Unauthorized\"}");
+        return;
+    }
+
+    // Get format parameter
+    String format = server->arg("format");
+    if (format.length() == 0) {
+        format = "json";
+    }
+
+    if (format == "json") {
+        // Export all module data as JSON
+        StaticJsonDocument<4096> doc;
+        JsonObject data = doc.to<JsonObject>();
+
+        // Add timestamp
+        data["exportTime"] = millis();
+        data["exportDate"] = String(BUILD_DATE);  // Placeholder - would need RTC for real date
+
+        // Add modules data
+        JsonObject modulesData = data.createNestedObject("modules");
+
+        JsonObject modules = config["modules"];
+        for (JsonPair kv : modules) {
+            const char* moduleId = kv.key().c_str();
+            JsonObject moduleData = modulesData.createNestedObject(moduleId);
+
+            // Copy module data
+            JsonObject moduleConfig = kv.value();
+            for (JsonPair prop : moduleConfig) {
+                moduleData[prop.key()] = prop.value();
+            }
+
+            // Add last update time if available
+            if (moduleConfig.containsKey("lastUpdate")) {
+                moduleData["lastUpdate"] = moduleConfig["lastUpdate"];
+            }
+        }
+
+        String response;
+        serializeJsonPretty(doc, response);
+
+        server->sendHeader("Content-Disposition", "attachment; filename=\"datatracker-data.json\"");
+        server->send(200, "application/json", response);
+
+    } else if (format == "csv") {
+        // Export module data as CSV
+        String csv = "Module,Property,Value,LastUpdate\n";
+
+        JsonObject modules = config["modules"];
+        for (JsonPair kv : modules) {
+            const char* moduleId = kv.key().c_str();
+            JsonObject moduleData = kv.value();
+
+            unsigned long lastUpdate = moduleData["lastUpdate"] | 0;
+            String lastUpdateStr = String(lastUpdate);
+
+            // Export each property as a row
+            for (JsonPair prop : moduleData) {
+                if (strcmp(prop.key().c_str(), "lastUpdate") == 0) continue;
+
+                csv += String(moduleId) + ",";
+                csv += String(prop.key().c_str()) + ",";
+
+                // Handle different value types
+                if (prop.value().is<float>()) {
+                    csv += String(prop.value().as<float>(), 2);
+                } else if (prop.value().is<int>()) {
+                    csv += String(prop.value().as<int>());
+                } else {
+                    csv += "\"" + prop.value().as<String>() + "\"";
+                }
+
+                csv += "," + lastUpdateStr + "\n";
+            }
+        }
+
+        server->sendHeader("Content-Disposition", "attachment; filename=\"datatracker-data.csv\"");
+        server->send(200, "text/csv", csv);
+
+    } else {
+        server->send(400, "application/json", "{\"error\":\"Invalid format. Use 'json' or 'csv'\"}");
+    }
 }
