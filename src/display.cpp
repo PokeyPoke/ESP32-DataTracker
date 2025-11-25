@@ -17,6 +17,10 @@ void DisplayManager::init() {
 
     u8g2.begin();
     u8g2.enableUTF8Print();
+
+    // Initialize activity timer to prevent immediate screensaver activation
+    lastActivityTime = millis();
+
     Serial.println("Display initialized");
 }
 
