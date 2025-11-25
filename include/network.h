@@ -42,6 +42,10 @@ private:
     void handleFactoryReset();
     void handleOTAUpload();
     void handleOTAStatus();
+    void handleGetAlerts();
+    void handleAddAlert();
+    void handleRemoveAlert();
+    void handleToggleAlert();
 
     // WiFi scanning
     void startWiFiScan();

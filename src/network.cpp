@@ -1732,6 +1732,23 @@ void NetworkManager::setupSettingsServer() {
         handleOTAUpload();
     });
 
+    // Alert management endpoints
+    server->on("/api/alerts", HTTP_GET, [this]() {
+        handleGetAlerts();
+    });
+
+    server->on("/api/alerts", HTTP_POST, [this]() {
+        handleAddAlert();
+    });
+
+    server->on("/api/alerts", HTTP_DELETE, [this]() {
+        handleRemoveAlert();
+    });
+
+    server->on("/api/alerts/toggle", HTTP_POST, [this]() {
+        handleToggleAlert();
+    });
+
     // Stock search proxy (no auth required) - bypasses CORS
     server->on("/api/stock-search", HTTP_GET, [this]() {
         handleStockSearch();
@@ -3135,4 +3152,164 @@ void NetworkManager::handleOTAStatus() {
     response += "}";
 
     server->send(200, "application/json", response);
+}
+
+void NetworkManager::handleGetAlerts() {
+    // Check authorization
+    String token = server->header("Authorization");
+    if (!security.validateSession(token)) {
+        server->send(401, "application/json", "{\"error\":\"Unauthorized\"}");
+        return;
+    }
+
+    // Return alerts from config
+    if (config.containsKey("alerts")) {
+        StaticJsonDocument<2048> doc;
+        doc["alerts"] = config["alerts"];
+
+        String response;
+        serializeJson(doc, response);
+        server->send(200, "application/json", response);
+    } else {
+        server->send(200, "application/json", "{\"alerts\":[]}");
+    }
+}
+
+void NetworkManager::handleAddAlert() {
+    // Check authorization
+    String token = server->header("Authorization");
+    if (!security.validateSession(token)) {
+        server->send(401, "application/json", "{\"error\":\"Unauthorized\"}");
+        return;
+    }
+
+    // Parse request body
+    String body = server->arg("plain");
+    StaticJsonDocument<512> doc;
+    DeserializationError error = deserializeJson(doc, body);
+
+    if (error) {
+        server->send(400, "application/json", "{\"error\":\"Invalid JSON\"}");
+        return;
+    }
+
+    // Extract alert data
+    const char* moduleId = doc["moduleId"] | "";
+    const char* label = doc["label"] | "";
+    int condition = doc["condition"] | 0;
+    float threshold = doc["threshold"] | 0.0f;
+
+    if (strlen(moduleId) == 0 || strlen(label) == 0) {
+        server->send(400, "application/json", "{\"error\":\"Missing required fields\"}");
+        return;
+    }
+
+    // Add to alerts array in config
+    JsonArray alerts = config["alerts"].isNull() ?
+                       config.createNestedArray("alerts") :
+                       config["alerts"].as<JsonArray>();
+
+    JsonObject newAlert = alerts.createNestedObject();
+    char alertId[16];
+    snprintf(alertId, sizeof(alertId), "alert_%d", alerts.size());
+
+    newAlert["id"] = alertId;
+    newAlert["moduleId"] = moduleId;
+    newAlert["label"] = label;
+    newAlert["condition"] = condition;
+    newAlert["threshold"] = threshold;
+    newAlert["enabled"] = true;
+    newAlert["triggered"] = false;
+
+    saveConfig();
+
+    String response = "{\"success\":true,\"id\":\"";
+    response += alertId;
+    response += "\"}";
+
+    server->send(200, "application/json", response);
+}
+
+void NetworkManager::handleRemoveAlert() {
+    // Check authorization
+    String token = server->header("Authorization");
+    if (!security.validateSession(token)) {
+        server->send(401, "application/json", "{\"error\":\"Unauthorized\"}");
+        return;
+    }
+
+    String alertId = server->arg("id");
+    if (alertId.length() == 0) {
+        server->send(400, "application/json", "{\"error\":\"Missing alert ID\"}");
+        return;
+    }
+
+    // Find and remove alert
+    JsonArray alerts = config["alerts"];
+    if (alerts.isNull()) {
+        server->send(404, "application/json", "{\"error\":\"Alert not found\"}");
+        return;
+    }
+
+    int foundIndex = -1;
+    for (int i = 0; i < alerts.size(); i++) {
+        if (alerts[i]["id"] == alertId) {
+            foundIndex = i;
+            break;
+        }
+    }
+
+    if (foundIndex == -1) {
+        server->send(404, "application/json", "{\"error\":\"Alert not found\"}");
+        return;
+    }
+
+    alerts.remove(foundIndex);
+    saveConfig();
+
+    server->send(200, "application/json", "{\"success\":true}");
+}
+
+void NetworkManager::handleToggleAlert() {
+    // Check authorization
+    String token = server->header("Authorization");
+    if (!security.validateSession(token)) {
+        server->send(401, "application/json", "{\"error\":\"Unauthorized\"}");
+        return;
+    }
+
+    String alertId = server->arg("id");
+    String enabledStr = server->arg("enabled");
+
+    if (alertId.length() == 0 || enabledStr.length() == 0) {
+        server->send(400, "application/json", "{\"error\":\"Missing parameters\"}");
+        return;
+    }
+
+    bool enabled = enabledStr == "true";
+
+    // Find and update alert
+    JsonArray alerts = config["alerts"];
+    if (alerts.isNull()) {
+        server->send(404, "application/json", "{\"error\":\"Alert not found\"}");
+        return;
+    }
+
+    bool found = false;
+    for (JsonVariant v : alerts) {
+        JsonObject alert = v.as<JsonObject>();
+        if (alert["id"] == alertId) {
+            alert["enabled"] = enabled;
+            found = true;
+            break;
+        }
+    }
+
+    if (!found) {
+        server->send(404, "application/json", "{\"error\":\"Alert not found\"}");
+        return;
+    }
+
+    saveConfig();
+    server->send(200, "application/json", "{\"success\":true}");
 }
