@@ -40,6 +40,8 @@ private:
     void handleStockSearch();
     void handleRestart();
     void handleFactoryReset();
+    void handleOTAUpload();
+    void handleOTAStatus();
 
     // WiFi scanning
     void startWiFiScan();

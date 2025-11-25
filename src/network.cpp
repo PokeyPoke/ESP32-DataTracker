@@ -5,6 +5,7 @@
 #include "version.h"
 #include <ESPmDNS.h>
 #include <LittleFS.h>
+#include <Update.h>
 
 // External objects (initialized in main)
 extern SecurityManager security;
@@ -1718,6 +1719,19 @@ void NetworkManager::setupSettingsServer() {
         handleFactoryReset();
     });
 
+    // OTA update endpoints
+    server->on("/api/ota/status", HTTP_GET, [this]() {
+        handleOTAStatus();
+    });
+
+    server->on("/api/ota/upload", HTTP_POST, [this]() {
+        // Final response after upload completes
+        server->send(200, "application/json", "{\"success\":true}");
+    }, [this]() {
+        // Handle upload data
+        handleOTAUpload();
+    });
+
     // Stock search proxy (no auth required) - bypasses CORS
     server->on("/api/stock-search", HTTP_GET, [this]() {
         handleStockSearch();
@@ -3043,4 +3057,82 @@ void NetworkManager::handleFactoryReset() {
     LittleFS.format();
     delay(1000);
     ESP.restart();
+}
+
+void NetworkManager::handleOTAUpload() {
+    // Check authorization
+    String token = server->header("Authorization");
+    if (!security.validateSession(token)) {
+        server->send(401, "application/json", "{\"error\":\"Unauthorized\"}");
+        return;
+    }
+
+    HTTPUpload& upload = server->upload();
+
+    if (upload.status == UPLOAD_FILE_START) {
+        Serial.printf("OTA Upload Start: %s\n", upload.filename.c_str());
+
+        // Begin OTA update
+        if (!Update.begin(UPDATE_SIZE_UNKNOWN)) {
+            Update.printError(Serial);
+            server->send(500, "application/json",
+                        "{\"error\":\"OTA begin failed\"}");
+            return;
+        }
+
+    } else if (upload.status == UPLOAD_FILE_WRITE) {
+        // Write firmware data
+        if (Update.write(upload.buf, upload.currentSize) != upload.currentSize) {
+            Update.printError(Serial);
+        }
+
+        // Print progress
+        static int lastProgress = -1;
+        int progress = (Update.progress() * 100) / Update.size();
+        if (progress != lastProgress && progress % 10 == 0) {
+            Serial.printf("OTA Progress: %d%%\n", progress);
+            lastProgress = progress;
+        }
+
+    } else if (upload.status == UPLOAD_FILE_END) {
+        if (Update.end(true)) {
+            Serial.printf("OTA Upload Complete: %u bytes\n", upload.totalSize);
+            server->send(200, "application/json",
+                        "{\"success\":true,\"message\":\"Update successful, rebooting...\"}");
+
+            // Reboot after a short delay
+            delay(1000);
+            ESP.restart();
+        } else {
+            Update.printError(Serial);
+            server->send(500, "application/json",
+                        "{\"error\":\"OTA end failed\"}");
+        }
+
+    } else if (upload.status == UPLOAD_FILE_ABORTED) {
+        Update.end();
+        Serial.println("OTA Upload Aborted");
+        server->send(500, "application/json",
+                    "{\"error\":\"Upload aborted\"}");
+    }
+}
+
+void NetworkManager::handleOTAStatus() {
+    // Check authorization
+    String token = server->header("Authorization");
+    if (!security.validateSession(token)) {
+        server->send(401, "application/json", "{\"error\":\"Unauthorized\"}");
+        return;
+    }
+
+    // Return OTA status information
+    String response = "{";
+    response += "\"currentVersion\":\"" + String(FIRMWARE_VERSION) + "\",";
+    response += "\"buildDate\":\"" + String(BUILD_DATE) + "\",";
+    response += "\"sketchMD5\":\"" + ESP.getSketchMD5() + "\",";
+    response += "\"freeSketchSpace\":" + String(ESP.getFreeSketchSpace()) + ",";
+    response += "\"sketchSize\":" + String(ESP.getSketchSize());
+    response += "}";
+
+    server->send(200, "application/json", response);
 }
