@@ -1,9 +1,7 @@
 #include "security.h"
+#include "constants.h"
 
-#define CODE_EXPIRATION_MS 300000    // 5 minutes
-#define SESSION_EXPIRATION_MS 1800000 // 30 minutes
-#define LOCKOUT_DURATION_MS 60000     // 1 minute
-#define MAX_FAILED_ATTEMPTS 3
+// Security timing constants now defined in constants.h
 
 SecurityManager::SecurityManager() {
     currentCode.code = 0;

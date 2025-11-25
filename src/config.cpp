@@ -1,4 +1,5 @@
 #include "config.h"
+#include "constants.h"
 
 // Global configuration document (StaticJsonDocument allocated in .bss, not heap)
 // Increased to 8KB to support 15-20 dynamic module instances
@@ -6,7 +7,7 @@ StaticJsonDocument<8192> config;
 
 // Track last save time to reduce flash wear
 static unsigned long lastSaveTime = 0;
-#define MIN_SAVE_INTERVAL 30000  // Minimum 30s between saves
+// MIN_SAVE_INTERVAL now defined in constants.h
 
 bool initStorage() {
     Serial.println("Initializing LittleFS...");

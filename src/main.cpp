@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include "constants.h"
 #include "config.h"
 #include "display.h"
 #include "network.h"
@@ -30,11 +31,7 @@ unsigned long lastDisplayUpdate = 0;
 unsigned long lastSerialCheck = 0;
 unsigned long lastSettingsCodeRefresh = 0;
 String lastDisplayedModule = "";  // Track which module is currently shown
-#define DISPLAY_UPDATE_INTERVAL 1000  // Update display every 1s
-#define SERIAL_CHECK_INTERVAL 100     // Check serial every 100ms
-#define BUTTON_DEBUG_DURATION 30000   // Auto-disable after 30 seconds
-#define QR_UPDATE_INTERVAL 500        // Check for client connection every 500ms
-#define SETTINGS_CODE_REFRESH 30000   // Refresh security code every 30s
+// Timing constants now defined in constants.h
 
 // Function prototypes
 void handleButtonEvent(ButtonEvent event);
