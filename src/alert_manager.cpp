@@ -4,6 +4,7 @@
 #include "scheduler.h"
 
 extern Scheduler scheduler;
+extern bool saveConfiguration(bool force);
 
 AlertManager::AlertManager() : alertCount(0) {
     // Initialize all alerts as empty
@@ -126,21 +127,15 @@ void AlertManager::checkAlerts() {
 
         rule.lastCheck = now;
 
-        // Get current value from scheduler/module
-        auto modules = scheduler.getModules();
-        auto it = modules.find(rule.moduleId);
-
-        if (it == modules.end()) {
+        // Get current value from config (simplified implementation)
+        // In a full implementation, this would query the actual module values
+        JsonObject moduleData = config["modules"][rule.moduleId];
+        if (moduleData.isNull()) {
             continue;  // Module not found
         }
 
-        ModuleInterface* module = it->second;
-        float currentValue = 0.0f;
-        float previousValue = 0.0f;
-
-        // Extract value based on module type
-        // This is simplified - in reality you'd need to parse the module's value
-        // For now, we'll use a placeholder
+        float currentValue = moduleData["value"] | 0.0f;
+        float previousValue = moduleData["previousValue"] | 0.0f;
 
         // Evaluate condition
         if (evaluateCondition(currentValue, previousValue, rule)) {
@@ -285,7 +280,7 @@ bool AlertManager::fromJson(const JsonArray& array) {
 bool AlertManager::saveToConfig() {
     JsonArray alertsArray = config.createNestedArray("alerts");
     toJson(alertsArray);
-    return saveConfig();
+    return saveConfiguration(true);
 }
 
 bool AlertManager::loadFromConfig() {

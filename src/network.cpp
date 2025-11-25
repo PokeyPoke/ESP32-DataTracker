@@ -11,6 +11,9 @@
 extern SecurityManager security;
 extern Scheduler scheduler;
 
+// External functions
+extern bool saveConfiguration(bool force);
+
 // Debug: Store last POST body and save result for debugging
 String lastPostBody = "";
 String lastSaveResult = "No save yet";
@@ -3230,7 +3233,7 @@ void NetworkManager::handleAddAlert() {
     newAlert["enabled"] = true;
     newAlert["triggered"] = false;
 
-    saveConfig();
+    saveConfiguration(true);
 
     String response = "{\"success\":true,\"id\":\"";
     response += alertId;
@@ -3274,7 +3277,7 @@ void NetworkManager::handleRemoveAlert() {
     }
 
     alerts.remove(foundIndex);
-    saveConfig();
+    saveConfiguration(true);
 
     server->send(200, "application/json", "{\"success\":true}");
 }
@@ -3319,7 +3322,7 @@ void NetworkManager::handleToggleAlert() {
         return;
     }
 
-    saveConfig();
+    saveConfiguration(true);
     server->send(200, "application/json", "{\"success\":true}");
 }
 

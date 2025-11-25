@@ -1,7 +1,7 @@
 #include "ota_manager.h"
 #include "constants.h"
 #include "version.h"
-#include <ESP.h>
+#include <Arduino.h>
 
 OTAManager::OTAManager()
     : otaEnabled(false), updateInProgress(false), updateProgress(0),
