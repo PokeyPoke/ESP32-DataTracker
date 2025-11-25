@@ -124,12 +124,6 @@ void setup() {
             scheduler.init();
             scheduler.loadModulesFromConfig();
 
-            // TEMPORARY DEBUG: Always fetch stock at startup to verify it works
-            Serial.println("\n*** TEMPORARY DEBUG: Force-fetching STOCK module at startup ***");
-            scheduler.requestFetch("stock", true);
-            delay(2000);
-            Serial.println("*** DEBUG: Check if stock lastUpdate changed ***\n");
-
             // Force initial fetch of active module
             String activeModule = config["device"]["activeModule"] | "bitcoin";
             Serial.print("Active module: ");
@@ -317,6 +311,7 @@ void cycleToNextModule() {
         return;
     }
 
+    #ifdef DEBUG_MODULE_CYCLING
     Serial.print("DEBUG: Total modules available: ");
     Serial.println(moduleCount);
     Serial.print("DEBUG: Module order: ");
@@ -325,6 +320,7 @@ void cycleToNextModule() {
         if (i < moduleCount - 1) Serial.print(", ");
     }
     Serial.println();
+    #endif
 
     // Find current module index
     String currentModule = config["device"]["activeModule"] | "bitcoin";
@@ -339,18 +335,24 @@ void cycleToNextModule() {
     // If current module not in order, start from beginning
     if (currentIndex == -1) {
         currentIndex = 0;
+        #ifdef DEBUG_MODULE_CYCLING
         Serial.println("DEBUG: Current module not in order, starting from beginning");
+        #endif
     }
 
+    #ifdef DEBUG_MODULE_CYCLING
     Serial.print("DEBUG: Current index: ");
     Serial.println(currentIndex);
+    #endif
 
     // Cycle to next (with wraparound)
     int nextIndex = (currentIndex + 1) % moduleCount;
     String nextModule = moduleOrder[nextIndex].as<String>();
 
+    #ifdef DEBUG_MODULE_CYCLING
     Serial.print("DEBUG: Next index: ");
     Serial.println(nextIndex);
+    #endif
     Serial.print("Cycling from ");
     Serial.print(currentModule);
     Serial.print(" to ");
