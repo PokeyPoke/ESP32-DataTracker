@@ -26,7 +26,13 @@ private:
     U8G2_SH1106_128X64_NONAME_F_HW_I2C u8g2;
     DisplayState currentState;
     uint8_t currentBrightness;
+    uint8_t savedBrightness;  // Brightness before screensaver
     bool brightnessIncreasing;
+
+    // Screensaver state
+    bool screensaverActive;
+    unsigned long lastActivityTime;
+    unsigned long screensaverTimeout;
 
     // Helper drawing functions
     void drawCenteredText(const char* text, int y, const uint8_t* font);
@@ -78,6 +84,14 @@ public:
     void setBrightness(uint8_t level);  // 0-255
     void cycleBrightness();             // Ping-pong cycle
     uint8_t getBrightness();
+
+    // Screensaver management
+    void updateActivity();              // Reset activity timer (call on user interaction)
+    void checkScreensaver();            // Check and activate/deactivate screensaver
+    void setScreensaverTimeout(unsigned long timeoutMs);  // Set timeout in milliseconds
+    bool isScreensaverActive();         // Check if screensaver is currently active
+    void disableScreensaver();          // Temporarily disable screensaver
+    void enableScreensaver();           // Re-enable screensaver
 };
 
 #endif // DISPLAY_H

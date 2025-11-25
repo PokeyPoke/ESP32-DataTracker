@@ -261,6 +261,9 @@ void loop() {
                 lastDisplayUpdate = now;
             }
         }
+
+        // Check and update screensaver status
+        display.checkScreensaver();
     }
 
     // Small delay to prevent watchdog
@@ -268,6 +271,9 @@ void loop() {
 }
 
 void handleButtonEvent(ButtonEvent event) {
+    // Reset screensaver on any button activity
+    display.updateActivity();
+
     switch (event) {
         case SHORT_PRESS:
             if (brightnessMode) {

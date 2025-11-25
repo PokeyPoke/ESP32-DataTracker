@@ -1,10 +1,12 @@
 #include "display.h"
 #include "config.h"
+#include "constants.h"
 #include <WiFi.h>
 
 DisplayManager::DisplayManager()
     : u8g2(U8G2_R0, /* reset=*/ U8X8_PIN_NONE), currentState(SPLASH),
-      currentBrightness(255), brightnessIncreasing(false) {
+      currentBrightness(255), savedBrightness(255), brightnessIncreasing(false),
+      screensaverActive(false), lastActivityTime(0), screensaverTimeout(SCREENSAVER_TIMEOUT) {
 }
 
 void DisplayManager::init() {
@@ -1080,4 +1082,67 @@ void DisplayManager::cycleBrightness() {
 
 uint8_t DisplayManager::getBrightness() {
     return currentBrightness;
+}
+
+// ============================================================================
+// SCREENSAVER MANAGEMENT
+// ============================================================================
+
+void DisplayManager::updateActivity() {
+    lastActivityTime = millis();
+
+    // If screensaver was active, deactivate it and restore brightness
+    if (screensaverActive) {
+        screensaverActive = false;
+        Serial.println("Screensaver deactivated - user activity detected");
+
+        // Restore previous brightness
+        setBrightness(savedBrightness);
+    }
+}
+
+void DisplayManager::checkScreensaver() {
+    // Skip if timeout is 0 (screensaver disabled)
+    if (screensaverTimeout == 0) {
+        return;
+    }
+
+    unsigned long currentTime = millis();
+    unsigned long inactiveTime = currentTime - lastActivityTime;
+
+    // Activate screensaver if inactive for too long
+    if (!screensaverActive && inactiveTime >= screensaverTimeout) {
+        screensaverActive = true;
+        Serial.println("Screensaver activated - reducing brightness");
+
+        // Save current brightness and dim display
+        savedBrightness = currentBrightness;
+        setBrightness(SCREENSAVER_BRIGHTNESS);
+    }
+}
+
+void DisplayManager::setScreensaverTimeout(unsigned long timeoutMs) {
+    screensaverTimeout = timeoutMs;
+    Serial.print("Screensaver timeout set to: ");
+    Serial.print(timeoutMs / 1000);
+    Serial.println(" seconds");
+}
+
+bool DisplayManager::isScreensaverActive() {
+    return screensaverActive;
+}
+
+void DisplayManager::disableScreensaver() {
+    screensaverTimeout = 0;
+    if (screensaverActive) {
+        screensaverActive = false;
+        setBrightness(savedBrightness);
+    }
+    Serial.println("Screensaver disabled");
+}
+
+void DisplayManager::enableScreensaver() {
+    screensaverTimeout = SCREENSAVER_TIMEOUT;
+    lastActivityTime = millis();  // Reset timer
+    Serial.println("Screensaver enabled");
 }
